@@ -7,14 +7,20 @@ import { DARK } from './game.js';
 const CELL = 1.5;
 const BOARD_FLOOR = 0.25;      // 盤の穴の底
 const TRAY_TOP = 0.28;
-const MY_POS = new THREE.Vector3(0, 0.3, 5.6);      // 自分の駒置き場 (下)
-const OPP_POS = new THREE.Vector3(3.0, 0.3, -6.5);  // 相手の駒置き場 (右上)
+const MY_POS = new THREE.Vector3(0, 0.3, 5.0);      // 自分の駒置き場 (盤の下)
+const OPP_POS = new THREE.Vector3(2.9, 0.3, -5.4);  // 相手の駒置き場 (右上)
 const GIVE_ZONE_Z = 0;                              // これより上で離すと相手に渡す
+const SLOT_GAP = 1.3;                               // 残りの駒の間隔 (取りやすいよう広め)
+const TRAY_Z = 7.0;                                 // 残りの駒 1列目の z
 const TRAVEL_Y = 2.9;
 const DRAG_Y = 1.4;
 
 export const cellPos = (i) => new THREE.Vector3(((i % 4) - 1.5) * CELL, BOARD_FLOOR, (Math.floor(i / 4) - 1.5) * CELL);
-export const slotPos = (id) => new THREE.Vector3(-3.75 + (id % 6) * 0.9, TRAY_TOP, -5.6 - Math.floor(id / 6) * 0.9);
+// 残りの駒は盤の下に 6・6・4 個の3列
+export const slotPos = (id) => {
+  const row = Math.floor(id / 6), n = row < 2 ? 6 : 4;
+  return new THREE.Vector3(((id % 6) - (n - 1) / 2) * SLOT_GAP, TRAY_TOP, TRAY_Z + row * SLOT_GAP);
+};
 
 function woodMat(tex, repeat, extra = {}) {
   const t = tex.clone();
@@ -68,9 +74,12 @@ export function createScene(canvas) {
   scene.environmentIntensity = 0.35;
 
   const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 120);
-  const target = new THREE.Vector3(0, 0.3, -0.7);
-  const GAME_POLAR = THREE.MathUtils.degToRad(15), GAME_AZ = THREE.MathUtils.degToRad(11);
-  const view = { polar: GAME_POLAR, az: GAME_AZ, dist: 30, auto: false };
+  const target = new THREE.Vector3(0, 0.3, 2.9);
+  const deg = THREE.MathUtils.degToRad;
+  const GAME_POLAR = deg(30), GAME_AZ = 0;
+  // ドラッグで動かせる範囲 (かなり狭め)
+  const POLAR_MIN = deg(18), POLAR_MAX = deg(42), AZ_LIMIT = deg(20);
+  const view = { polar: GAME_POLAR, az: GAME_AZ, dist: 30, auto: false, userPolar: GAME_POLAR, userAz: GAME_AZ };
 
   // ---- ライト
   scene.add(new THREE.HemisphereLight(0xfff0dd, 0x3a2412, 0.55));
@@ -109,8 +118,8 @@ export function createScene(canvas) {
   // ---- 駒置き (トレイ)
   const trayRing = new THREE.RingGeometry(0.5, 0.56, 48).rotateX(-Math.PI / 2);
   const trayMat = woodMat(tex.cherry, [0.2, 0.2]);
-  const tray = new THREE.Mesh(new THREE.BoxGeometry(5.8, TRAY_TOP, 3.0), trayMat);
-  tray.position.set(-1.5, TRAY_TOP / 2, -6.5);
+  const tray = new THREE.Mesh(new THREE.BoxGeometry(6 * SLOT_GAP + 0.2, TRAY_TOP, 3 * SLOT_GAP + 0.2), trayMat);
+  tray.position.set(0, TRAY_TOP / 2, TRAY_Z + SLOT_GAP);
   tray.castShadow = tray.receiveShadow = true;
   scene.add(tray);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0x1a0d05, transparent: true, opacity: 0.35 });
@@ -129,15 +138,47 @@ export function createScene(canvas) {
     scene.add(pedestal);
   }
 
-  // 離したときの置き先を示す白い円
-  const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false });
-  const cellDisc = new THREE.Mesh(new THREE.CircleGeometry(0.66, 48).rotateX(-Math.PI / 2), whiteMat);
+  // 離したときの置き先を縁取る白い枠
+  const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthWrite: false });
+  const cellDisc = new THREE.Mesh(new THREE.RingGeometry(0.69, 0.79, 64).rotateX(-Math.PI / 2), whiteMat);
   cellDisc.visible = false;
   scene.add(cellDisc);
-  const stationDisc = new THREE.Mesh(new THREE.CircleGeometry(0.95, 48).rotateX(-Math.PI / 2), whiteMat);
+  const stationDisc = new THREE.Mesh(new THREE.RingGeometry(0.66, 0.78, 64).rotateX(-Math.PI / 2), whiteMat);
   stationDisc.position.set(OPP_POS.x, OPP_POS.y + 0.01, OPP_POS.z);
   stationDisc.visible = false;
   scene.add(stationDisc);
+
+  // ---- 机に書かれた案内文 (盤の上側、盤と同じ向き)
+  const TEXT_W = 5.6, TEXT_H = 1.5;
+  const textCanvas = document.createElement('canvas');
+  textCanvas.width = 1400; textCanvas.height = 375;
+  const textTex = new THREE.CanvasTexture(textCanvas);
+  textTex.colorSpace = THREE.SRGBColorSpace;
+  textTex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+  const textMesh = new THREE.Mesh(
+    new THREE.PlaneGeometry(TEXT_W, TEXT_H).rotateX(-Math.PI / 2),
+    new THREE.MeshStandardMaterial({ map: textTex, transparent: true, roughness: 0.8, depthWrite: false, emissive: 0xffffff, emissiveMap: textTex, emissiveIntensity: 0.35 }),
+  );
+  textMesh.position.set(-0.75, 0.005, -5.4);
+  textMesh.receiveShadow = true;
+  scene.add(textMesh);
+  function drawText(title = '', sub = '') {
+    const c = textCanvas.getContext('2d'), W = textCanvas.width, H = textCanvas.height;
+    const font = getComputedStyle(document.body).fontFamily;
+    c.clearRect(0, 0, W, H);
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = '#f6ecd6';
+    c.shadowColor = '#0008'; c.shadowBlur = 6;
+    const fit = (text, size, y, weight) => {
+      c.font = `${weight} ${size}px ${font}`;
+      const w = c.measureText(text).width;
+      if (w > W * 0.96) c.font = `${weight} ${Math.floor(size * W * 0.96 / w)}px ${font}`;
+      c.fillText(text, W / 2, y);
+    };
+    if (sub) { fit(title, 130, H * 0.3, 800); fit(sub, 100, H * 0.75, 600); }
+    else fit(title, 150, H / 2, 800);
+    textTex.needsUpdate = true;
+  }
 
   // ---- マスのリング / ヒットテスト用
   const cellRingMat = Array.from({ length: 16 }, () => new THREE.MeshBasicMaterial({ color: 0xf2b84b, transparent: true, opacity: 0, depthWrite: false }));
@@ -203,16 +244,10 @@ export function createScene(canvas) {
       }
     }
     cellDisc.visible = hoverCell >= 0;
-    if (hoverCell >= 0) cellDisc.position.set(cellPos(hoverCell).x, BOARD_FLOOR + 0.006, cellPos(hoverCell).z);
+    if (hoverCell >= 0) cellDisc.position.set(cellPos(hoverCell).x, BOARD_FLOOR + 0.2, cellPos(hoverCell).z);
     stationDisc.visible = overZone;
-    const win = new Set(state.line || []);
     for (let i = 0; i < 16; i++) {
-      const empty = state.board[i] === -1;
-      const m = cellRingMat[i];
-      m.userData = {
-        base: win.has(i) ? 1 : input.place && empty ? 0.28 : 0,
-        pulse: win.has(i),
-      };
+      cellRingMat[i].userData = { base: input.place && state.board[i] === -1 ? 0.28 : 0 };
     }
   }
 
@@ -234,8 +269,10 @@ export function createScene(canvas) {
     return state.board[c] === -1 ? c : -1;
   };
 
+  // 駒以外の場所をドラッグすると視点を回す
+  let orbit = null;
   canvas.addEventListener('pointerdown', (e) => {
-    if (drag || !state || !e.isPrimary) return;
+    if (drag || orbit || !state || !e.isPrimary) return;
     ndc.set(((e.clientX - canvas.getBoundingClientRect().left) / canvas.clientWidth) * 2 - 1, -((e.clientY - canvas.getBoundingClientRect().top) / canvas.clientHeight) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     for (const h of ray.intersectObjects(pieceRoots, true)) {
@@ -243,15 +280,25 @@ export function createScene(canvas) {
       while (o && o.userData.id === undefined) o = o.parent;
       if (!o) continue;
       const mode = o.userData.loc === 'tray' && input.pick ? 'give' : o.userData.loc === 'hand-me' && input.place ? 'place' : null;
-      if (!mode) return;
+      if (!mode) break;
       drag = { piece: o, mode, id: e.pointerId, from: o.userData.pos.clone() };
       canvas.setPointerCapture(e.pointerId);
       o.userData.path = [];
       o.userData.target = o.userData.pos.clone().setY(DRAG_Y);
       return;
     }
+    if (view.auto) return;
+    orbit = { id: e.pointerId, x: e.clientX, y: e.clientY };
+    canvas.setPointerCapture(e.pointerId);
   }, true);
   canvas.addEventListener('pointermove', (e) => {
+    if (orbit && e.pointerId === orbit.id) {
+      const s = 2.4 / (canvas.clientHeight || window.innerHeight);
+      view.userAz = THREE.MathUtils.clamp(view.userAz - (e.clientX - orbit.x) * s, GAME_AZ - AZ_LIMIT, GAME_AZ + AZ_LIMIT);
+      view.userPolar = THREE.MathUtils.clamp(view.userPolar - (e.clientY - orbit.y) * s, POLAR_MIN, POLAR_MAX);
+      orbit.x = e.clientX; orbit.y = e.clientY;
+      return;
+    }
     if (!drag || e.pointerId !== drag.id) return;
     const p = aim(e);
     if (!p) return;
@@ -264,6 +311,7 @@ export function createScene(canvas) {
   const inGiveZone = (p) => drag.mode === 'give' && p.z < GIVE_ZONE_Z && Math.hypot(p.x - drag.from.x, p.z - drag.from.z) > 0.8;
 
   function endDrag(e, cancel) {
+    if (orbit && e.pointerId === orbit.id) { orbit = null; return; }
     if (!drag || e.pointerId !== drag.id) return;
     const { piece, mode } = drag;
     const p = cancel ? null : aim(e);
@@ -293,7 +341,7 @@ export function createScene(canvas) {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    view.dist = Math.max(16.6 / (2 * tanV), 10.4 / (2 * tanV * camera.aspect));
+    view.dist = Math.max(16.0 / (2 * tanV), 10.6 / (2 * tanV * camera.aspect));
     placeCamera();
   }
   new ResizeObserver(fitCamera).observe(canvas);
@@ -313,21 +361,18 @@ export function createScene(canvas) {
         u.pos.lerp(wp, u.path.length > 1 ? k * 1.15 : k);
         if (!u.target && u.path.length > 1 && u.pos.distanceTo(wp) < 0.18) u.path.shift();
       }
-      tv.copy(u.pos);
-      if (win.has(u.id)) tv.y += 0.12 + Math.sin(t * 5 + u.id) * 0.08;
-      g.position.copy(tv);
+      g.position.copy(u.pos);
       const glow = u === drag?.piece
         ? 0.22 + Math.sin(t * 5) * 0.08
-        : win.has(u.id) ? 0.35 + Math.sin(t * 6) * 0.2 : 0;
+        : win.has(u.id) ? 0.6 + Math.sin(t * 3) * 0.15 : 0;
       u.mat.emissiveIntensity += (glow - u.mat.emissiveIntensity) * 0.2;
     }
     for (const m of cellRingMat) {
       const d = m.userData || { base: 0 };
-      const want = d.base * (d.pulse ? 0.75 + Math.sin(t * 5) * 0.25 : 1);
-      m.opacity += (want - m.opacity) * 0.2;
+      m.opacity += (d.base - m.opacity) * 0.2;
     }
-    const wantPolar = view.auto ? THREE.MathUtils.degToRad(48) : GAME_POLAR;
-    const wantAz = view.auto ? t * 0.15 : GAME_AZ;
+    const wantPolar = view.auto ? deg(48) : view.userPolar;
+    const wantAz = view.auto ? t * 0.15 : view.userAz;
     view.polar += (wantPolar - view.polar) * 0.05;
     view.az = view.auto ? wantAz : view.az + (wantAz - view.az) * 0.05;
     placeCamera();
@@ -341,8 +386,10 @@ export function createScene(canvas) {
     setInput(i) { input = i; refresh(); },
     onTray(fn) { handlers.tray = fn; },
     onCell(fn) { handlers.cell = fn; },
+    setText(title, sub) { drawText(title, sub); },
     setAutoRotate(on) {
       view.auto = on;
+      view.userPolar = GAME_POLAR; view.userAz = GAME_AZ;
       if (!on) view.az = Math.atan2(Math.sin(view.az), Math.cos(view.az));
     },
   };

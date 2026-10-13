@@ -19,7 +19,7 @@ button.primary.alt { background: linear-gradient(180deg, #b9825a, #8e5a38 55%, #
 button.ghost { background: #0003; color: var(--maple); border: 1px solid #ecd2a455; backdrop-filter: blur(4px); }
 button.icon { width: 42px; height: 42px; padding: 0; border-radius: 50%; background: #1d120acc; color: var(--maple); border: 1px solid #ecd2a455; font-size: 18px; }
 button:disabled { filter: saturate(.5) brightness(.65); }
-#btn-confirm { white-space: nowrap; }
+#btn-next { white-space: nowrap; }
 
 .overlay { position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: center; padding: 20px; background: radial-gradient(ellipse at center, #1d120a55, #1d120acc); backdrop-filter: blur(2px); z-index: 10; }
 .panel {
@@ -46,10 +46,9 @@ input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid 
 #hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: max(12px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom)); }
 #hud > * { pointer-events: none; }
 #hud button { pointer-events: auto; }
-#hud header { display: flex; align-items: center; gap: 10px; }
-#status { flex: 1; text-align: center; padding: 8px 4px; font-size: 15px; letter-spacing: .08em; line-height: 1.5; color: #f6ecd6; }
+#hud header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 #hud footer { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 #hud .row { display: flex; gap: 10px; justify-content: center; }
 button.mini { padding: 5px 14px; font-size: 13px; border-radius: 999px; background: #1d120a66; color: var(--maple); border: 1px solid #ecd2a444; text-shadow: 0 1px 2px #000; }
 #btn-undo:disabled { opacity: .35; filter: none; }
-@media (max-width: 380px) { .panel h1 { font-size: 38px; } #status { font-size: 13px; } }
+@media (max-width: 380px) { .panel h1 { font-size: 38px; } }

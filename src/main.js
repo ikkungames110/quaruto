@@ -13,22 +13,21 @@ let state = newGame(0);
 let firstPlayer = 0;
 let undoInfo = null;         // 直前に自分が置いた駒を戻すための情報 { state, after, player }
 let rematch = { me: false, them: false };
-let resultTimer = null;
 
 // ---- 画面切り替え
-const panels = ['p-title', 'p-host', 'p-join', 'p-result', 'p-error'];
+const panels = ['p-title', 'p-host', 'p-join', 'p-error'];
 function showPanel(id) {
   $('menu').hidden = !id;
   for (const p of panels) $(p).hidden = p !== id;
 }
 function showMenu() {
-  clearTimeout(resultTimer);
   net?.close(); net = null;
   mode = 'menu';
   $('hud').hidden = true;
   state = demoState();
   undoInfo = null;
   sync(); scene.setInput({ pick: false, place: false });
+  scene.setText('');
   scene.setAutoRotate(true);
   showPanel('p-title');
 }
@@ -42,7 +41,6 @@ function demoState() {
 }
 function showError(title, sub) {
   net?.close(); net = null;
-  clearTimeout(resultTimer);
   $('error-title').textContent = title;
   $('error-sub').textContent = sub;
   showPanel('p-error');
@@ -50,13 +48,10 @@ function showError(title, sub) {
 
 // ---- 対局
 function startGame(first) {
-  clearTimeout(resultTimer);
   firstPlayer = first;
   state = newGame(first);
   undoInfo = null;
   rematch = { me: false, them: false };
-  $('btn-again').disabled = false;
-  $('btn-again').textContent = 'もう一度あそぶ';
   scene.setAutoRotate(false);
   sync();
   showPanel(null);
@@ -77,7 +72,6 @@ function apply(player, action, remote = false) {
   undoInfo = state.phase === 'over' ? null : { state: prev, after: state, player };
   sync();
   render();
-  if (state.phase === 'over') resultTimer = setTimeout(showResult, 2200);
   return true;
 }
 
@@ -96,36 +90,30 @@ function send(action) {
   if (mode === 'online') net.send(action);
 }
 
+// 案内文は机の上に書かれているように 3D 側で描く
 function render() {
   const mine = myTurn();
-  const s = $('status');
-  s.classList.toggle('mine', mine);
-  let text;
-  if (state.phase === 'over') text = state.winner === 2 ? '引き分け' : mode === 'local' ? `${who(state.winner)}の勝ち！` : state.winner === me ? 'あなたの勝ち！' : '相手の勝ち';
-  else if (mode === 'local') text = state.phase === 'select'
-    ? `${who(state.turn)}：渡す駒を相手の台へドラッグしてください`
-    : `${who(state.turn)}：渡された駒をドラッグして盤に置いてください`;
-  else if (state.phase === 'select') text = mine ? '駒を相手の台へドラッグして渡してください' : '相手が駒を選んでいます…';
-  else text = mine ? '渡された駒をドラッグして盤に置いてください' : '相手が置く場所を考えています…';
-  s.textContent = text;
+  const turn = mode === 'local' ? who(state.turn) : mine ? 'あなたの番' : '相手の番';
+  if (state.phase === 'over') {
+    scene.setText(state.winner === 2 ? '引き分け' : mode === 'local' ? `${who(state.winner)}の勝ち！` : state.winner === me ? 'あなたの勝ち！' : '相手の勝ち');
+  } else if (state.phase === 'select') {
+    scene.setText(turn, mine ? '渡す駒を右上の台へ' : '駒を選んでいます…');
+  } else {
+    scene.setText(turn, mine ? '渡された駒を盤に置く' : '置く場所を考えています…');
+  }
 
   scene.setInput({ pick: mine && state.phase === 'select', place: mine && state.phase === 'place' });
-  
-  $('btn-undo').disabled = !(undoInfo && state === undoInfo.after && (mode === 'local' || undoInfo.player === me));
-  $('btn-confirm').hidden = state.phase !== 'over';
-}
 
-function showResult() {
-  if (state.phase !== 'over') return;
-  const draw = state.winner === 2;
-  let title, sub;
-  if (draw) { title = '引き分け'; sub = '全てのマスが埋まりました。いい勝負でした。'; }
-  else if (mode === 'local') { title = `${who(state.winner)}の勝ち！`; sub = '共通の特徴がそろいました。'; }
-  else if (state.winner === me) { title = 'あなたの勝ち！'; sub = '共通の特徴がそろいました。'; }
-  else { title = '相手の勝ち'; sub = '相手の列がそろいました。次は負けません。'; }
-  $('result-title').textContent = title;
-  $('result-sub').textContent = sub;
-  showPanel('p-result');
+  const over = state.phase === 'over';
+  $('btn-undo').hidden = over;
+  $('btn-undo').disabled = !(undoInfo && state === undoInfo.after && (mode === 'local' || undoInfo.player === me));
+  $('btn-next').hidden = !over;
+  if (over) {
+    $('btn-next').disabled = mode === 'online' && rematch.me;
+    $('btn-next').textContent = mode !== 'online' ? '次のゲームへ'
+      : rematch.me ? '相手をまっています…'
+      : rematch.them ? '次のゲームへ (相手は準備OK)' : '次のゲームへ';
+  }
 }
 
 scene.onTray((id) => {
@@ -134,7 +122,6 @@ scene.onTray((id) => {
 scene.onCell((cell) => {
   if (myTurn() && state.phase === 'place' && state.board[cell] === -1) send({ t: 'place', cell });
 });
-$('btn-confirm').onclick = showResult;
 $('btn-undo').onclick = () => {
   if (undo(undoInfo?.player) && mode === 'online') net.send({ t: 'undo' });
 };
@@ -148,7 +135,7 @@ function onlineEvents(extra) {
       else if (m.t === 'undo' && mode === 'online') undo(1 - me);
       else if (m.t === 'rematch' && mode === 'online') {
         rematch.them = true;
-        if ($('p-result').hidden === false) $('result-sub').textContent = '相手がもう一度あそびたがっています。';
+        render();
         maybeRestart();
       }
     },
@@ -229,19 +216,16 @@ $('join-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') joinW
 
 $('btn-local').onclick = () => { mode = 'local'; startGame(Math.random() < 0.5 ? 0 : 1); };
 
-$('btn-again').onclick = () => {
+$('btn-next').onclick = () => {
   if (mode === 'local') return startGame(1 - firstPlayer);
   rematch.me = true;
   net.send({ t: 'rematch' });
-  $('btn-again').disabled = true;
-  $('btn-again').textContent = '相手の返事をまっています…';
+  render();
   maybeRestart();
 };
-$('btn-look').onclick = () => showPanel(null);
 
 // ---- 共通ボタン
 document.querySelectorAll('.back').forEach((b) => (b.onclick = showMenu));
-$('btn-menu').onclick = showMenu;
 $('btn-error-ok').onclick = showMenu;
 $('btn-quit').onclick = () => { if (state.phase === 'over' || confirm('対局を終了してメニューに戻りますか？')) showMenu(); };
 const openRules = () => ($('rules').hidden = false);
