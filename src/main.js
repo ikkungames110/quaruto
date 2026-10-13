@@ -97,7 +97,7 @@ function render() {
   if (state.phase === 'over') {
     scene.setText(state.winner === 2 ? '引き分け' : mode === 'local' ? `${who(state.winner)}の勝ち！` : state.winner === me ? 'あなたの勝ち！' : '相手の勝ち');
   } else if (state.phase === 'select') {
-    scene.setText(turn, mine ? '渡す駒を右上の台へ' : '駒を選んでいます…');
+    scene.setText(turn, mine ? '渡す駒を向こうの台へ' : '駒を選んでいます…');
   } else {
     scene.setText(turn, mine ? '渡された駒を盤に置く' : '置く場所を考えています…');
   }
@@ -232,6 +232,10 @@ const openRules = () => ($('rules').hidden = false);
 $('btn-help').onclick = openRules;
 $('btn-rules').onclick = openRules;
 $('btn-rules-close').onclick = () => ($('rules').hidden = true);
+
+// 長押しで文字選択やメニューが出ないようにする
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+document.addEventListener('selectstart', (e) => { if (e.target.tagName !== 'INPUT') e.preventDefault(); });
 
 // ---- 起動
 showMenu();

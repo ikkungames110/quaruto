@@ -8,8 +8,8 @@ const CELL = 1.5;
 const BOARD_FLOOR = 0.25;      // 盤の穴の底
 const TRAY_TOP = 0.28;
 const MY_POS = new THREE.Vector3(0, 0.3, 5.0);      // 自分の駒置き場 (盤の下)
-const OPP_POS = new THREE.Vector3(2.9, 0.3, -5.4);  // 相手の駒置き場 (右上)
-const GIVE_ZONE_Z = 0;                              // これより上で離すと相手に渡す
+const OPP_POS = new THREE.Vector3(0, 0.3, -5.0);    // 相手の駒置き場 (盤の向こう側)
+const GIVE_ZONE_Z = 4.3;                            // これより上 (盤の最下部あたり) で離すと相手に渡す
 const SLOT_GAP = 1.3;                               // 残りの駒の間隔 (取りやすいよう広め)
 const TRAY_Z = 7.0;                                 // 残りの駒 1列目の z
 const TRAVEL_Y = 2.9;
@@ -74,7 +74,7 @@ export function createScene(canvas) {
   scene.environmentIntensity = 0.35;
 
   const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 120);
-  const target = new THREE.Vector3(0, 0.3, 2.9);
+  const target = new THREE.Vector3(0, 0.3, 2.2);
   const deg = THREE.MathUtils.degToRad;
   const GAME_POLAR = deg(30), GAME_AZ = 0;
   // ドラッグで動かせる範囲 (かなり狭め)
@@ -159,7 +159,7 @@ export function createScene(canvas) {
     new THREE.PlaneGeometry(TEXT_W, TEXT_H).rotateX(-Math.PI / 2),
     new THREE.MeshStandardMaterial({ map: textTex, transparent: true, roughness: 0.8, depthWrite: false, emissive: 0xffffff, emissiveMap: textTex, emissiveIntensity: 0.35 }),
   );
-  textMesh.position.set(-0.75, 0.005, -5.4);
+  textMesh.position.set(0, 0.005, -6.7);
   textMesh.receiveShadow = true;
   scene.add(textMesh);
   function drawText(title = '', sub = '') {
@@ -307,7 +307,7 @@ export function createScene(canvas) {
     const z = inGiveZone(p);
     if (c !== hoverCell || z !== overZone) { hoverCell = c; overZone = z; refresh(); }
   });
-  // 相手に渡す判定は広く (盤の上半分から上すべて)。タップだけで渡さないよう少し動かしたときだけ有効
+  // 相手に渡す判定は広く (盤の最下部から上すべて)。タップだけで渡さないよう少し動かしたときだけ有効
   const inGiveZone = (p) => drag.mode === 'give' && p.z < GIVE_ZONE_Z && Math.hypot(p.x - drag.from.x, p.z - drag.from.z) > 0.8;
 
   function endDrag(e, cancel) {
@@ -341,7 +341,7 @@ export function createScene(canvas) {
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    view.dist = Math.max(16.0 / (2 * tanV), 10.6 / (2 * tanV * camera.aspect));
+    view.dist = Math.max(17.2 / (2 * tanV), 10.6 / (2 * tanV * camera.aspect));
     placeCamera();
   }
   new ResizeObserver(fitCamera).observe(canvas);

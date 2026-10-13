@@ -3,7 +3,8 @@
   --gold: #f2b84b; --ink: #2b180c;
   --serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'BIZ UDPMincho', Georgia, serif;
 }
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+input { -webkit-user-select: text; user-select: text; }
 html, body { margin: 0; height: 100%; overflow: hidden; background: #1d120a; font-family: var(--serif); color: var(--maple); overscroll-behavior: none; }
 #gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
 [hidden] { display: none !important; }
