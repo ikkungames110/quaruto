@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { WOODS } from './wood.js';
 import { buildPiece } from './pieces.js';
@@ -8,12 +7,14 @@ import { DARK } from './game.js';
 const CELL = 1.5;
 const BOARD_FLOOR = 0.25;      // 盤の穴の底
 const TRAY_TOP = 0.28;
-const HAND_POS = new THREE.Vector3(0, 0.3, -5.1);
+const MY_POS = new THREE.Vector3(0, 0.3, 5.6);      // 自分の駒置き場 (下)
+const OPP_POS = new THREE.Vector3(3.0, 0.3, -6.5);  // 相手の駒置き場 (右上)
+const GIVE_ZONE_Z = 0;                              // これより上で離すと相手に渡す
 const TRAVEL_Y = 2.9;
 const DRAG_Y = 1.4;
 
 export const cellPos = (i) => new THREE.Vector3(((i % 4) - 1.5) * CELL, BOARD_FLOOR, (Math.floor(i / 4) - 1.5) * CELL);
-export const slotPos = (id) => new THREE.Vector3(((id >> 1) - 3.5) * 0.97, TRAY_TOP, id & 1 ? 5.3 : 6.9);
+export const slotPos = (id) => new THREE.Vector3(-3.75 + (id % 6) * 0.9, TRAY_TOP, -5.6 - Math.floor(id / 6) * 0.9);
 
 function woodMat(tex, repeat, extra = {}) {
   const t = tex.clone();
@@ -67,17 +68,9 @@ export function createScene(canvas) {
   scene.environmentIntensity = 0.35;
 
   const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 120);
-  const target = new THREE.Vector3(0, 0.4, 0.9);
-  const controls = new OrbitControls(camera, canvas);
-  controls.target.copy(target);
-  controls.enablePan = false;
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.08;
-  controls.minPolarAngle = THREE.MathUtils.degToRad(18);
-  controls.maxPolarAngle = THREE.MathUtils.degToRad(76);
-  controls.minAzimuthAngle = THREE.MathUtils.degToRad(-70);
-  controls.maxAzimuthAngle = THREE.MathUtils.degToRad(70);
-  controls.autoRotateSpeed = 0.5;
+  const target = new THREE.Vector3(0, 0.3, -0.7);
+  const GAME_POLAR = THREE.MathUtils.degToRad(15), GAME_AZ = THREE.MathUtils.degToRad(11);
+  const view = { polar: GAME_POLAR, az: GAME_AZ, dist: 30, auto: false };
 
   // ---- ライト
   scene.add(new THREE.HemisphereLight(0xfff0dd, 0x3a2412, 0.55));
@@ -116,8 +109,8 @@ export function createScene(canvas) {
   // ---- 駒置き (トレイ)
   const trayRing = new THREE.RingGeometry(0.5, 0.56, 48).rotateX(-Math.PI / 2);
   const trayMat = woodMat(tex.cherry, [0.2, 0.2]);
-  const tray = new THREE.Mesh(new THREE.BoxGeometry(8.4, TRAY_TOP, 3.5), trayMat);
-  tray.position.set(0, TRAY_TOP / 2, 6.1);
+  const tray = new THREE.Mesh(new THREE.BoxGeometry(5.8, TRAY_TOP, 3.0), trayMat);
+  tray.position.set(-1.5, TRAY_TOP / 2, -6.5);
   tray.castShadow = tray.receiveShadow = true;
   scene.add(tray);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0x1a0d05, transparent: true, opacity: 0.35 });
@@ -127,14 +120,24 @@ export function createScene(canvas) {
     m.position.set(p.x, TRAY_TOP + 0.003, p.z);
     scene.add(m);
   }
-  // 「渡された駒」の台
-  const pedestal = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.78, 0.86, HAND_POS.y, 56),
-    woodMat(tex.oak, [0.6, 0.3]),
-  );
-  pedestal.position.set(HAND_POS.x, HAND_POS.y / 2, HAND_POS.z);
-  pedestal.castShadow = pedestal.receiveShadow = true;
-  scene.add(pedestal);
+  // 駒置き場 (自分: 下 / 相手: 右上)
+  const stationMat = woodMat(tex.oak, [0.6, 0.3]);
+  for (const pos of [MY_POS, OPP_POS]) {
+    const pedestal = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.86, pos.y, 56), stationMat);
+    pedestal.position.set(pos.x, pos.y / 2, pos.z);
+    pedestal.castShadow = pedestal.receiveShadow = true;
+    scene.add(pedestal);
+  }
+
+  // 離したときの置き先を示す白い円
+  const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.8, depthWrite: false });
+  const cellDisc = new THREE.Mesh(new THREE.CircleGeometry(0.66, 48).rotateX(-Math.PI / 2), whiteMat);
+  cellDisc.visible = false;
+  scene.add(cellDisc);
+  const stationDisc = new THREE.Mesh(new THREE.CircleGeometry(0.95, 48).rotateX(-Math.PI / 2), whiteMat);
+  stationDisc.position.set(OPP_POS.x, OPP_POS.y + 0.01, OPP_POS.z);
+  stationDisc.visible = false;
+  scene.add(stationDisc);
 
   // ---- マスのリング / ヒットテスト用
   const cellRingMat = Array.from({ length: 16 }, () => new THREE.MeshBasicMaterial({ color: 0xf2b84b, transparent: true, opacity: 0, depthWrite: false }));
@@ -173,7 +176,7 @@ export function createScene(canvas) {
   }
 
   // ---- 状態
-  let state = null, hoverCell = -1, drag = null;
+  let state = null, handMine = true, hoverCell = -1, overZone = false, drag = null;
   let input = { pick: false, place: false };
   let handlers = { tray: () => {}, cell: () => {} };
 
@@ -185,12 +188,12 @@ export function createScene(canvas) {
       let loc, pos;
       if (drag && drag.piece === g) continue;
       if (cell >= 0) { loc = `cell${cell}`; pos = cellPos(cell); }
-      else if (state.hand === id) { loc = 'hand'; pos = HAND_POS.clone(); }
+      else if (state.hand === id) { loc = handMine ? 'hand-me' : 'hand-opp'; pos = (handMine ? MY_POS : OPP_POS).clone(); }
       else { loc = 'tray'; pos = slotPos(id); }
 
       if (loc !== u.loc) {
         const from = u.pos.clone();
-        if (loc === 'tray' && u.loc === 'tray') u.path = [pos];
+        if (u.loc === 'dropped') u.path = [pos];   // ドラッグで離した駒は持ち上げずにそのまま移動
         else u.path = [new THREE.Vector3(from.x, TRAVEL_Y, from.z), new THREE.Vector3(pos.x, TRAVEL_Y, pos.z), pos];
         u.loc = loc;
       } else if (u.path.length) {
@@ -199,18 +202,21 @@ export function createScene(canvas) {
         u.path = [pos];
       }
     }
+    cellDisc.visible = hoverCell >= 0;
+    if (hoverCell >= 0) cellDisc.position.set(cellPos(hoverCell).x, BOARD_FLOOR + 0.006, cellPos(hoverCell).z);
+    stationDisc.visible = overZone;
     const win = new Set(state.line || []);
     for (let i = 0; i < 16; i++) {
       const empty = state.board[i] === -1;
       const m = cellRingMat[i];
       m.userData = {
-        base: i === hoverCell || win.has(i) ? 1 : input.place && empty ? 0.28 : 0,
+        base: win.has(i) ? 1 : input.place && empty ? 0.28 : 0,
         pulse: win.has(i),
       };
     }
   }
 
-  // ---- 入力 (駒のドラッグで操作。それ以外のドラッグは視点操作)
+  // ---- 入力 (駒のドラッグで操作)
   const ray = new THREE.Raycaster();
   const ndc = new THREE.Vector2();
   const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -DRAG_Y);
@@ -227,7 +233,6 @@ export function createScene(canvas) {
     const c = cz * 4 + cx;
     return state.board[c] === -1 ? c : -1;
   };
-  const overHand = (p) => Math.hypot(p.x - HAND_POS.x, p.z - HAND_POS.z) < 1.6;
 
   canvas.addEventListener('pointerdown', (e) => {
     if (drag || !state || !e.isPrimary) return;
@@ -237,10 +242,9 @@ export function createScene(canvas) {
       let o = h.object;
       while (o && o.userData.id === undefined) o = o.parent;
       if (!o) continue;
-      const mode = o.userData.loc === 'tray' && input.pick ? 'give' : o.userData.loc === 'hand' && input.place ? 'place' : null;
+      const mode = o.userData.loc === 'tray' && input.pick ? 'give' : o.userData.loc === 'hand-me' && input.place ? 'place' : null;
       if (!mode) return;
-      drag = { piece: o, mode, id: e.pointerId };
-      controls.enabled = false;
+      drag = { piece: o, mode, id: e.pointerId, from: o.userData.pos.clone() };
       canvas.setPointerCapture(e.pointerId);
       o.userData.path = [];
       o.userData.target = o.userData.pos.clone().setY(DRAG_Y);
@@ -253,48 +257,47 @@ export function createScene(canvas) {
     if (!p) return;
     drag.piece.userData.target.set(p.x, DRAG_Y, p.z);
     const c = drag.mode === 'place' ? cellAt(p) : -1;
-    if (c !== hoverCell) { hoverCell = c; refresh(); }
+    const z = inGiveZone(p);
+    if (c !== hoverCell || z !== overZone) { hoverCell = c; overZone = z; refresh(); }
   });
+  // 相手に渡す判定は広く (盤の上半分から上すべて)。タップだけで渡さないよう少し動かしたときだけ有効
+  const inGiveZone = (p) => drag.mode === 'give' && p.z < GIVE_ZONE_Z && Math.hypot(p.x - drag.from.x, p.z - drag.from.z) > 0.8;
+
   function endDrag(e, cancel) {
     if (!drag || e.pointerId !== drag.id) return;
     const { piece, mode } = drag;
     const p = cancel ? null : aim(e);
+    const give = p && inGiveZone(p);
     drag = null;
-    controls.enabled = true;
     hoverCell = -1;
+    overZone = false;
     piece.userData.target = null;
     piece.userData.loc = 'dropped';   // refresh で元の位置への移動 (または新しい位置) を再計算させる
     if (p && mode === 'place') { const c = cellAt(p); if (c >= 0) handlers.cell(c); }
-    else if (p && overHand(p)) handlers.tray(piece.userData.id);
+    else if (give) handlers.tray(piece.userData.id);
     refresh();
   }
   canvas.addEventListener('pointerup', (e) => endDrag(e, false));
   canvas.addEventListener('pointercancel', (e) => endDrag(e, true));
 
   // ---- サイズ / カメラ位置
-  let userMoved = false;
-  controls.addEventListener('start', () => { userMoved = true; });
   const tmp = new THREE.Vector3();
-  function fitCamera(force) {
+  function placeCamera() {
+    tmp.setFromSphericalCoords(view.dist, view.polar, view.az);
+    camera.position.copy(target).add(tmp);
+    camera.lookAt(target);
+  }
+  function fitCamera() {
     const w = canvas.clientWidth || window.innerWidth, h = canvas.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
     const tanV = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-    const need = Math.max(14.2 / (2 * tanV), 10.2 / (2 * tanV * camera.aspect));
-    controls.minDistance = need * 0.55;
-    controls.maxDistance = need * 1.3;
-    if (force || !userMoved) {
-      const polar = THREE.MathUtils.degToRad(46);
-      const az = 0;
-      tmp.setFromSphericalCoords(need, polar, az);
-      camera.position.copy(target).add(tmp);
-      controls.target.copy(target);
-      controls.update();
-    }
+    view.dist = Math.max(16.6 / (2 * tanV), 10.4 / (2 * tanV * camera.aspect));
+    placeCamera();
   }
-  new ResizeObserver(() => fitCamera(false)).observe(canvas);
-  fitCamera(true);
+  new ResizeObserver(fitCamera).observe(canvas);
+  fitCamera();
 
   // ---- ループ
   const clock = new THREE.Clock();
@@ -323,27 +326,24 @@ export function createScene(canvas) {
       const want = d.base * (d.pulse ? 0.75 + Math.sin(t * 5) * 0.25 : 1);
       m.opacity += (want - m.opacity) * 0.2;
     }
-    controls.update();
+    const wantPolar = view.auto ? THREE.MathUtils.degToRad(48) : GAME_POLAR;
+    const wantAz = view.auto ? t * 0.15 : GAME_AZ;
+    view.polar += (wantPolar - view.polar) * 0.05;
+    view.az = view.auto ? wantAz : view.az + (wantAz - view.az) * 0.05;
+    placeCamera();
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   }
   frame();
 
   return {
-    setState(s) { state = s; refresh(); },
+    setState(s, mine = true) { state = s; handMine = mine; refresh(); },
     setInput(i) { input = i; refresh(); },
     onTray(fn) { handlers.tray = fn; },
     onCell(fn) { handlers.cell = fn; },
     setAutoRotate(on) {
-      controls.autoRotate = on;
-      if (on) {
-        controls.minAzimuthAngle = -Infinity; controls.maxAzimuthAngle = Infinity;
-      } else {
-        controls.minAzimuthAngle = THREE.MathUtils.degToRad(-70); controls.maxAzimuthAngle = THREE.MathUtils.degToRad(70);
-        userMoved = false;
-        fitCamera(true);
-      }
+      view.auto = on;
+      if (!on) view.az = Math.atan2(Math.sin(view.az), Math.cos(view.az));
     },
-    resetView() { userMoved = false; fitCamera(true); },
   };
 }

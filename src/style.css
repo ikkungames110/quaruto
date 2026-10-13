@@ -19,7 +19,7 @@ button.primary.alt { background: linear-gradient(180deg, #b9825a, #8e5a38 55%, #
 button.ghost { background: #0003; color: var(--maple); border: 1px solid #ecd2a455; backdrop-filter: blur(4px); }
 button.icon { width: 42px; height: 42px; padding: 0; border-radius: 50%; background: #1d120acc; color: var(--maple); border: 1px solid #ecd2a455; font-size: 18px; }
 button:disabled { filter: saturate(.5) brightness(.65); }
-#btn-confirm { white-space: nowrap; padding-inline: 10px; }
+#btn-confirm { white-space: nowrap; }
 
 .overlay { position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: center; padding: 20px; background: radial-gradient(ellipse at center, #1d120a55, #1d120acc); backdrop-filter: blur(2px); z-index: 10; }
 .panel {
@@ -47,11 +47,10 @@ input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid 
 #hud > * { pointer-events: none; }
 #hud button { pointer-events: auto; }
 #hud header { display: flex; align-items: center; gap: 10px; }
-#status { flex: 1; text-align: center; padding: 10px 14px; border-radius: 14px; background: #1d120acc; border: 1px solid #ecd2a444; font-size: 16px; letter-spacing: .06em; line-height: 1.5; backdrop-filter: blur(6px); }
-#status.mine { border-color: var(--gold); box-shadow: 0 0 18px #f2b84b33; }
+#status { flex: 1; text-align: center; padding: 8px 4px; font-size: 15px; letter-spacing: .08em; line-height: 1.5; color: #d9bd8f; text-shadow: 0 1px 3px #000, 0 0 10px #000a; }
+#status.mine { color: var(--gold); }
 #hud footer { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-#chip { padding: 8px 14px; border-radius: 999px; background: #1d120acc; border: 1px solid #ecd2a455; font-size: 14px; letter-spacing: .08em; }
-#hud .row { display: flex; gap: 10px; width: 100%; max-width: 460px; justify-content: center; }
-#btn-confirm, #btn-undo { flex: 1; }
-#btn-undo:disabled { opacity: .45; }
-@media (max-width: 380px) { .panel h1 { font-size: 38px; } #status { font-size: 14px; } }
+#hud .row { display: flex; gap: 10px; justify-content: center; }
+button.mini { padding: 5px 14px; font-size: 13px; border-radius: 999px; background: #1d120a66; color: var(--maple); border: 1px solid #ecd2a444; text-shadow: 0 1px 2px #000; }
+#btn-undo:disabled { opacity: .35; filter: none; }
+@media (max-width: 380px) { .panel h1 { font-size: 38px; } #status { font-size: 13px; } }

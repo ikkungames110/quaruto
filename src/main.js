@@ -1,5 +1,5 @@
 import { createScene } from './scene.js';
-import { newGame, selectPiece, placePiece, describePiece } from './game.js';
+import { newGame, selectPiece, placePiece } from './game.js';
 import { playClack } from './audio.js';
 import { hostRoom, joinRoom, normalizeCode } from './net.js';
 
@@ -29,7 +29,7 @@ function showMenu() {
   $('hud').hidden = true;
   state = demoState();
   undoInfo = null;
-  scene.setState(state); scene.setInput({ pick: false, place: false });
+  sync(); scene.setInput({ pick: false, place: false });
   scene.setAutoRotate(true);
   showPanel('p-title');
 }
@@ -59,12 +59,13 @@ function startGame(first) {
   $('btn-again').disabled = false;
   $('btn-again').textContent = 'もう一度あそぶ';
   scene.setAutoRotate(false);
-  scene.setState(state);
+  sync();
   showPanel(null);
   $('hud').hidden = false;
   render();
 }
 
+const sync = () => scene.setState(state, mode !== 'online' || state.turn === me);
 const actor = () => (mode === 'local' ? state.turn : me);
 const myTurn = () => state.phase !== 'over' && (mode === 'local' || state.turn === me);
 const who = (p) => (mode === 'local' ? `プレイヤー${p + 1}` : p === me ? 'あなた' : '相手');
@@ -76,7 +77,7 @@ function apply(player, action, remote = false) {
   state = next;
   undoInfo = action.t === 'place' && state.phase === 'select' ? { state: prev, player } : null;
   playClack(action.t === 'place' ? 1 : 0.6, remote ? 450 : 0);
-  scene.setState(state);
+  sync();
   render();
   if (state.phase === 'over') resultTimer = setTimeout(showResult, 2200);
   return true;
@@ -86,7 +87,7 @@ function undo(player) {
   if (!undoInfo || undoInfo.player !== player || state.turn !== player || state.phase !== 'select') return false;
   state = undoInfo.state;
   undoInfo = null;
-  scene.setState(state);
+  sync();
   render();
   return true;
 }
@@ -104,19 +105,14 @@ function render() {
   let text;
   if (state.phase === 'over') text = state.winner === 2 ? '引き分け' : mode === 'local' ? `${who(state.winner)}の勝ち！` : state.winner === me ? 'あなたの勝ち！' : '相手の勝ち';
   else if (mode === 'local') text = state.phase === 'select'
-    ? `${who(state.turn)}：渡す駒をドラッグして台に乗せてください`
+    ? `${who(state.turn)}：渡す駒を相手の台へドラッグしてください`
     : `${who(state.turn)}：渡された駒をドラッグして盤に置いてください`;
-  else if (state.phase === 'select') text = mine ? '駒をドラッグして台に乗せ、相手に渡してください' : '相手が駒を選んでいます…';
+  else if (state.phase === 'select') text = mine ? '駒を相手の台へドラッグして渡してください' : '相手が駒を選んでいます…';
   else text = mine ? '渡された駒をドラッグして盤に置いてください' : '相手が置く場所を考えています…';
   s.textContent = text;
 
   scene.setInput({ pick: mine && state.phase === 'select', place: mine && state.phase === 'place' });
   
-  const chip = $('chip');
-  const showPiece = state.phase === 'place' ? state.hand : -1;
-  chip.hidden = showPiece < 0;
-  if (showPiece >= 0) chip.textContent = describePiece(showPiece).join(' ・ ');
-
   $('btn-undo').disabled = !(undoInfo && undoInfo.player === actor() && state.turn === actor() && state.phase === 'select');
   $('btn-confirm').hidden = state.phase !== 'over';
 }
@@ -144,7 +140,6 @@ $('btn-confirm').onclick = showResult;
 $('btn-undo').onclick = () => {
   if (undo(actor()) && mode === 'online') net.send({ t: 'undo' });
 };
-$('btn-view').onclick = () => scene.resetView();
 
 // ---- オンライン
 function onlineEvents(extra) {

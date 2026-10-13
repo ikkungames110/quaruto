@@ -18,11 +18,9 @@
       <button id="btn-help" class="icon" aria-label="ルール">?</button>
     </header>
     <footer>
-      <div id="chip" hidden></div>
       <div class="row">
-        <button id="btn-view" class="ghost">視点をもどす</button>
-        <button id="btn-undo" class="primary" disabled>やり直す</button>
-        <button id="btn-confirm" class="primary" hidden>結果を見る</button>
+        <button id="btn-undo" class="mini" disabled>やり直す</button>
+        <button id="btn-confirm" class="mini" hidden>結果を見る</button>
       </div>
     </footer>
   </div>
@@ -77,10 +75,9 @@
       <h2>あそびかた</h2>
       <ol>
         <li>駒は全16個。<b>高い/低い・濃い/淡い・丸/四角・穴あり/穴なし</b>の4つの特徴があります。</li>
-        <li>自分の番では、まず<b>渡された駒を盤へドラッグして置き</b>、次に<b>相手に渡す駒を台へドラッグ</b>します。間違えて置いたら「やり直す」で戻せます。</li>
+        <li>自分の番では、まず<b>渡された駒を盤へドラッグして置き</b>、次に<b>相手に渡す駒を相手の台(右上)へドラッグ</b>します。間違えて置いたら「やり直す」で戻せます。</li>
         <li>縦・横・ななめの4マスに、<b>1つでも共通の特徴</b>の駒が並べば、置いた人の勝ちです。</li>
         <li>最後まで決まらなければ引き分けです。</li>
-        <li>駒以外をドラッグで視点を回し、ピンチ(ホイール)で拡大できます。</li>
       </ol>
       <button class="primary" id="btn-rules-close">とじる</button>
     </section>
