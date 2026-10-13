@@ -1,0 +1,20 @@
+{
+  "name": "quaruto",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Quarto 3D — P2P online board game for phones",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test": "node --test test/game.test.js"
+  },
+  "dependencies": {
+    "peerjs": "^1.5.4",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#1d120a" />
+  <title>QUARTO — 木のボードゲーム</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <canvas id="gl"></canvas>
+
+  <!-- 対局HUD -->
+  <div id="hud" hidden>
+    <header>
+      <button id="btn-quit" class="icon" aria-label="メニューへ">✕</button>
+      <div id="status" aria-live="polite"></div>
+      <button id="btn-help" class="icon" aria-label="ルール">?</button>
+    </header>
+    <footer>
+      <div id="chip" hidden></div>
+      <div class="row">
+        <button id="btn-view" class="ghost">視点をもどす</button>
+        <button id="btn-undo" class="primary" disabled>やり直す</button>
+        <button id="btn-confirm" class="primary" hidden>結果を見る</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- メニュー / ロビー / 結果 -->
+  <main id="menu" class="overlay">
+    <section class="panel" id="p-title">
+      <h1>QUARTO</h1>
+      <p class="sub">駒を渡し、駒を置く。<br />共通点がそろえば、あなたの勝ち。</p>
+      <button class="primary" id="btn-create">部屋をつくる</button>
+      <button class="primary alt" id="btn-join">部屋に入る</button>
+      <button class="ghost" id="btn-local">1台で2人対戦</button>
+      <button class="ghost" id="btn-rules">あそびかた</button>
+    </section>
+
+    <section class="panel" id="p-host" hidden>
+      <h2>対戦相手をまっています</h2>
+      <p class="sub">相手にこのコードかリンクを伝えてください</p>
+      <div class="code" id="room-code">·····</div>
+      <input id="room-link" readonly />
+      <button class="primary" id="btn-share">リンクを共有</button>
+      <p class="note" id="host-note">部屋を準備中…</p>
+      <button class="ghost back">もどる</button>
+    </section>
+
+    <section class="panel" id="p-join" hidden>
+      <h2>部屋に入る</h2>
+      <p class="sub">ホストから教えてもらった5文字のコード</p>
+      <input id="join-code" class="code-input" maxlength="5" autocapitalize="characters" autocomplete="off" spellcheck="false" placeholder="ABCDE" />
+      <button class="primary" id="btn-join-go">入室</button>
+      <p class="note" id="join-note"></p>
+      <button class="ghost back">もどる</button>
+    </section>
+
+    <section class="panel" id="p-result" hidden>
+      <h2 id="result-title"></h2>
+      <p class="sub" id="result-sub"></p>
+      <button class="primary" id="btn-again">もう一度あそぶ</button>
+      <button class="ghost" id="btn-look">盤面を見る</button>
+      <button class="ghost" id="btn-menu">メニューへ</button>
+    </section>
+
+    <section class="panel" id="p-error" hidden>
+      <h2 id="error-title"></h2>
+      <p class="sub" id="error-sub"></p>
+      <button class="primary" id="btn-error-ok">メニューへ</button>
+    </section>
+  </main>
+
+  <div id="rules" class="overlay" hidden>
+    <section class="panel rules">
+      <h2>あそびかた</h2>
+      <ol>
+        <li>駒は全16個。<b>高い/低い・濃い/淡い・丸/四角・穴あり/穴なし</b>の4つの特徴があります。</li>
+        <li>自分の番では、まず<b>渡された駒を盤へドラッグして置き</b>、次に<b>相手に渡す駒を台へドラッグ</b>します。間違えて置いたら「やり直す」で戻せます。</li>
+        <li>縦・横・ななめの4マスに、<b>1つでも共通の特徴</b>の駒が並べば、置いた人の勝ちです。</li>
+        <li>最後まで決まらなければ引き分けです。</li>
+        <li>駒以外をドラッグで視点を回し、ピンチ(ホイール)で拡大できます。</li>
+      </ol>
+      <button class="primary" id="btn-rules-close">とじる</button>
+    </section>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

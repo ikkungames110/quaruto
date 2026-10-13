@@ -1,0 +1,57 @@
+:root {
+  --maple: #ecd2a4; --maple-d: #d4a96a; --walnut: #4a2e1a; --walnut-d: #2b180c;
+  --gold: #f2b84b; --ink: #2b180c;
+  --serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', 'BIZ UDPMincho', Georgia, serif;
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #1d120a; font-family: var(--serif); color: var(--maple); overscroll-behavior: none; }
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; outline: none; }
+[hidden] { display: none !important; }
+
+button { font: inherit; cursor: pointer; border: 0; border-radius: 12px; padding: 14px 20px; font-size: 17px; letter-spacing: .08em; transition: transform .1s, filter .15s; }
+button:active { transform: translateY(1px) scale(.985); }
+button.primary {
+  color: var(--ink); font-weight: 700;
+  background: linear-gradient(180deg, #f6dfb4, #dcb273 55%, #c99a58);
+  box-shadow: 0 1px 0 #fff6 inset, 0 -2px 0 #0003 inset, 0 6px 14px #0006;
+}
+button.primary.alt { background: linear-gradient(180deg, #b9825a, #8e5a38 55%, #764526); color: #fbeacb; }
+button.ghost { background: #0003; color: var(--maple); border: 1px solid #ecd2a455; backdrop-filter: blur(4px); }
+button.icon { width: 42px; height: 42px; padding: 0; border-radius: 50%; background: #1d120acc; color: var(--maple); border: 1px solid #ecd2a455; font-size: 18px; }
+button:disabled { filter: saturate(.5) brightness(.65); }
+#btn-confirm { white-space: nowrap; padding-inline: 10px; }
+
+.overlay { position: fixed; inset: 0; display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; align-content: center; padding: 20px; background: radial-gradient(ellipse at center, #1d120a55, #1d120acc); backdrop-filter: blur(2px); z-index: 10; }
+.panel {
+  width: min(420px, 100%); padding: 30px 26px 26px; text-align: center; display: flex; flex-direction: column; gap: 12px;
+  border-radius: 20px; border: 1px solid #ecd2a433;
+  background:
+    repeating-linear-gradient(92deg, #ffffff06 0 2px, #0000 2px 7px),
+    linear-gradient(160deg, #4d3020, #2c190d 70%);
+  box-shadow: 0 20px 60px #000a, 0 1px 0 #ecd2a433 inset;
+}
+.panel h1 { margin: 0; font-size: 44px; letter-spacing: .2em; padding-left: .2em; color: var(--maple); text-shadow: 0 2px 0 #0008, 0 0 24px #f2b84b44; font-weight: 800; }
+.panel h2 { margin: 0; font-size: 22px; letter-spacing: .1em; }
+.sub { margin: 0 0 6px; line-height: 1.8; color: #d9bd8f; font-size: 15px; }
+.note { margin: 0; min-height: 1.4em; font-size: 14px; color: #d9bd8f; }
+.note.err { color: #ff9c85; }
+.code { font-size: 46px; font-weight: 800; letter-spacing: .3em; padding-left: .3em; color: var(--gold); font-family: ui-monospace, Menlo, monospace; text-shadow: 0 2px 0 #0008; }
+input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid #ecd2a455; background: #1d120a99; color: var(--maple); font: inherit; font-size: 14px; text-align: center; }
+.code-input { font-size: 34px; letter-spacing: .3em; text-transform: uppercase; font-family: ui-monospace, Menlo, monospace; padding: 12px 8px 12px calc(8px + .3em); }
+.rules { text-align: left; }
+.rules h2 { text-align: center; }
+.rules ol { margin: 4px 0 8px; padding-left: 1.3em; line-height: 1.9; font-size: 15px; }
+.rules b { color: var(--gold); }
+
+#hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; padding: max(12px, env(safe-area-inset-top)) 12px max(14px, env(safe-area-inset-bottom)); }
+#hud > * { pointer-events: none; }
+#hud button { pointer-events: auto; }
+#hud header { display: flex; align-items: center; gap: 10px; }
+#status { flex: 1; text-align: center; padding: 10px 14px; border-radius: 14px; background: #1d120acc; border: 1px solid #ecd2a444; font-size: 16px; letter-spacing: .06em; line-height: 1.5; backdrop-filter: blur(6px); }
+#status.mine { border-color: var(--gold); box-shadow: 0 0 18px #f2b84b33; }
+#hud footer { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+#chip { padding: 8px 14px; border-radius: 999px; background: #1d120acc; border: 1px solid #ecd2a455; font-size: 14px; letter-spacing: .08em; }
+#hud .row { display: flex; gap: 10px; width: 100%; max-width: 460px; justify-content: center; }
+#btn-confirm, #btn-undo { flex: 1; }
+#btn-undo:disabled { opacity: .45; }
+@media (max-width: 380px) { .panel h1 { font-size: 38px; } #status { font-size: 14px; } }
