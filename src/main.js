@@ -1,6 +1,5 @@
 import { createScene } from './scene.js';
 import { newGame, selectPiece, placePiece } from './game.js';
-import { playClack } from './audio.js';
 import { hostRoom, joinRoom, normalizeCode } from './net.js';
 
 const $ = (id) => document.getElementById(id);
@@ -12,7 +11,7 @@ let net = null;
 let me = 0;                  // オンライン時の自分のプレイヤー番号 (ホスト=0, ゲスト=1)
 let state = newGame(0);
 let firstPlayer = 0;
-let undoInfo = null;         // 直前に自分が置いた駒を戻すための情報 { state, player }
+let undoInfo = null;         // 直前に自分が置いた駒を戻すための情報 { state, after, player }
 let rematch = { me: false, them: false };
 let resultTimer = null;
 
@@ -75,8 +74,7 @@ function apply(player, action, remote = false) {
   const next = action.t === 'select' ? selectPiece(state, player, action.piece) : placePiece(state, player, action.cell);
   if (!next) return false;
   state = next;
-  undoInfo = action.t === 'place' && state.phase === 'select' ? { state: prev, player } : null;
-  playClack(action.t === 'place' ? 1 : 0.6, remote ? 450 : 0);
+  undoInfo = state.phase === 'over' ? null : { state: prev, after: state, player };
   sync();
   render();
   if (state.phase === 'over') resultTimer = setTimeout(showResult, 2200);
@@ -84,7 +82,7 @@ function apply(player, action, remote = false) {
 }
 
 function undo(player) {
-  if (!undoInfo || undoInfo.player !== player || state.turn !== player || state.phase !== 'select') return false;
+  if (!undoInfo || undoInfo.player !== player || state !== undoInfo.after) return false;
   state = undoInfo.state;
   undoInfo = null;
   sync();
@@ -113,7 +111,7 @@ function render() {
 
   scene.setInput({ pick: mine && state.phase === 'select', place: mine && state.phase === 'place' });
   
-  $('btn-undo').disabled = !(undoInfo && undoInfo.player === actor() && state.turn === actor() && state.phase === 'select');
+  $('btn-undo').disabled = !(undoInfo && state === undoInfo.after && (mode === 'local' || undoInfo.player === me));
   $('btn-confirm').hidden = state.phase !== 'over';
 }
 
@@ -138,7 +136,7 @@ scene.onCell((cell) => {
 });
 $('btn-confirm').onclick = showResult;
 $('btn-undo').onclick = () => {
-  if (undo(actor()) && mode === 'online') net.send({ t: 'undo' });
+  if (undo(undoInfo?.player) && mode === 'online') net.send({ t: 'undo' });
 };
 
 // ---- オンライン

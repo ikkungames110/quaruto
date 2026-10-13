@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ja"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>QUARTO 残りの駒 レイアウト案</title>
+<style>
+body{margin:0;background:#1d120a;color:#f6ecd6;font-family:'Hiragino Mincho ProN','Yu Mincho',serif;padding:20px}
+h1{font-size:20px}.wrap{display:flex;flex-wrap:wrap;gap:28px}
+.card{width:260px}.card h2{font-size:16px;margin:0 0 4px}.card p{font-size:13px;line-height:1.6;margin:6px 0;color:#d9bd8f}
+svg{display:block;width:260px;border-radius:14px;border:1px solid #ecd2a455;background:#3a2412}
+.l{color:#6ec07a}.b{color:#ff9c85}
+</style></head><body>
+<h1>残りの駒の配置案 (スマホ縦画面のイメージ)</h1>
+<p style="font-size:13px;color:#d9bd8f">明るい丸=淡い駒 / 暗い丸=濃い駒 / 大きい丸=高い駒。白い破線=相手の駒置き場。下の円=自分の駒置き場。</p>
+<div class="wrap" id="w"></div>
+<script>
+const W=390,H=780,NS='http://www.w3.org/2000/svg';
+const el=(p,t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);p.appendChild(e);return e};
+function piece(g,i,x,y,r){el(g,'circle',{cx:x,cy:y,r:i&1?r:r*.8,fill:i&2?'#4a2e1a':'#ecd2a4',stroke:'#0006','stroke-width':1.5})}
+function frame(boardW,boardX,boardY,pcs,station,opts={}){
+  const s=el(document.createElementNS(NS,'svg'),'g',{});
+}
+function make(title,desc,pros,cons,draw){
+  const c=document.createElement('div');c.className='card';
+  c.innerHTML=`<h2>${title}</h2>`;
+  const svg=document.createElementNS(NS,'svg');svg.setAttribute('viewBox',`0 0 ${W} ${H}`);c.appendChild(svg);
+  const cell=(bx,by,bw)=>{const cs=bw/4;for(let i=0;i<16;i++)el(svg,'circle',{cx:bx+(i%4+.5)*cs,cy:by+(Math.floor(i/4)+.5)*cs,r:cs*.4,fill:'#241409'});el(svg,'rect',{x:bx,y:by,width:bw,height:bw,rx:10,fill:'none',stroke:'#ecd2a455'})};
+  const grid=(n,cols,x0,y0,dx,dy,r,offs)=>{for(let i=0;i<n;i++){const row=Math.floor(i/cols),col=i%cols;piece(svg,i,x0+col*dx+(offs&&row%2?dx/2:0),y0+row*dy,r)}};
+  const station=(x,y,r=34)=>{el(svg,'circle',{cx:x,cy:y,r,fill:'none',stroke:'#fff','stroke-dasharray':'6 5','stroke-width':2});el(svg,'text',{x,y:y+r+16,fill:'#fff','font-size':13,'text-anchor':'middle'}).textContent='相手へ'};
+  const mine=(y)=>{el(svg,'circle',{cx:W/2,cy:y,r:38,fill:'#5a3a22',stroke:'#ecd2a455'});el(svg,'text',{x:W/2,y:y+62,fill:'#d9bd8f','font-size':13,'text-anchor':'middle'}).textContent='自分(渡された駒)'};
+  draw({svg,cell,grid,station,mine,el,piece});
+  c.insertAdjacentHTML('beforeend',`<p>${desc}</p><p class="l">＋ ${pros}</p><p class="b">－ ${cons}</p>`);
+  document.getElementById('w').appendChild(c);
+}
+make('A. 左上に6×3 (現在)','左上に3段の塊、右上に相手の台。','駒が大きめで押しやすい。盤も大きい。','上部が少し縦に長い。',
+ ({svg,cell,grid,station,mine})=>{grid(16,6,40,60,45,50,19);station(330,110);cell(35,215,320);mine(660)});
+make('B. 上に横8×2','画面幅いっぱいに2段。相手の台は2段の下の右。','見渡しやすい。1段に8個で列の対応が分かりやすい。','駒がやや小さい(幅÷8)。',
+ ({svg,cell,grid,station,mine})=>{grid(16,8,32,50,46,48,17);station(330,185,30);cell(35,245,320);mine(670)});
+make('C. 左に4×4','4×4のタイル。盤と同じ並びなので位置を覚えやすい。右上に相手の台。','盤と同じ4×4で覚えやすい。縦が短い。','左に寄るので右上が少し寂しい。駒は中くらい。',
+ ({svg,cell,grid,station,mine})=>{grid(16,4,50,55,52,52,20);station(300,110,42);cell(35,265,320);mine(670)});
+make('D. 1段に横一列(スクロール)','駒を横一列に並べ、横スクロールで選ぶ。','上部が一番コンパクト。盤を最大に。','見えていない駒がある。スクロールとドラッグが競合しやすい。',
+ ({svg,cell,grid,station,mine})=>{grid(9,9,26,50,42,0,17);el(svg,'text',{x:W/2,y:92,fill:'#d9bd8f','font-size':12,'text-anchor':'middle'}).textContent='← スクロール →';station(330,160,30);cell(25,215,340);mine(670)});
+make('E. ちどり配置(6-5-5)','六角状にすき間なく詰める。','同じ面積で駒を大きくできる。','見た目がやや不規則。',
+ ({svg,cell,grid,station,mine})=>{for(let i=0,y=0;i<16;){const n=y%2?5:6;for(let k=0;k<n&&i<16;k++,i++)piece(svg,i,38+k*52+(y%2?26:0),60+y*48,21);y++}station(335,110);cell(35,230,320);mine(670)});
+make('F. 盤の左右に縦2列','盤を少し小さくし、左右に縦並び(左8、右8)。相手の台は上中央。','上下が空き、盤と手元が近い。','盤が小さくなる。右手が盤を隠す。',
+ ({svg,cell,grid,station,mine})=>{for(let i=0;i<16;i++)piece(svg,i,i<8?30:360,200+(i%8)*45,15);station(W/2,110,38);cell(62,170,266);mine(600)});
+</script></body></html>

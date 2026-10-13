@@ -47,8 +47,7 @@ input { width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid 
 #hud > * { pointer-events: none; }
 #hud button { pointer-events: auto; }
 #hud header { display: flex; align-items: center; gap: 10px; }
-#status { flex: 1; text-align: center; padding: 8px 4px; font-size: 15px; letter-spacing: .08em; line-height: 1.5; color: #d9bd8f; text-shadow: 0 1px 3px #000, 0 0 10px #000a; }
-#status.mine { color: var(--gold); }
+#status { flex: 1; text-align: center; padding: 8px 4px; font-size: 15px; letter-spacing: .08em; line-height: 1.5; color: #f6ecd6; }
 #hud footer { display: flex; flex-direction: column; align-items: center; gap: 10px; }
 #hud .row { display: flex; gap: 10px; justify-content: center; }
 button.mini { padding: 5px 14px; font-size: 13px; border-radius: 999px; background: #1d120a66; color: var(--maple); border: 1px solid #ecd2a444; text-shadow: 0 1px 2px #000; }
